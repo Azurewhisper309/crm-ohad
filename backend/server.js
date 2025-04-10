@@ -41,7 +41,7 @@ app.post("/forms", checkRole("user"), auth, upload.single("file"), async (req, r
   }
 
   try {
-    const result = await pool.query(
+    const result = await query(
       "INSERT INTO forms (name, typeOf, uniqueNumber, filePath, status, takeNumber, user_id) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *",
       [name, typeOf, uniqueNumber, req.file ? req.file.path : null, "New", "", user_id]
     );
@@ -54,7 +54,7 @@ app.post("/forms", checkRole("user"), auth, upload.single("file"), async (req, r
 
 app.get("/forms", checkRole("admin"), auth, async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM forms");
+    const result = await query("SELECT * FROM forms");
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching forms:", error);
@@ -65,7 +65,7 @@ app.get("/forms", checkRole("admin"), auth, async (req, res) => {
 app.get("/forms/user/:userId", checkRole("user"), auth, async (req, res) => {
   const userId = req.params.userId;
   try {
-    const result = await pool.query("SELECT * FROM forms WHERE user_id = $1", [userId]);
+    const result = await query("SELECT * FROM forms WHERE user_id = $1", [userId]);
     res.status(200).json(result.rows);
   } catch (error) {
     console.error("Error fetching user's forms:", error);
@@ -78,7 +78,7 @@ app.put("/forms/:id/user", checkRole("user"), auth, async (req, res) => {
   const { name, typeOf, uniqueNumber } = req.body;
 
   try {
-    const result = await pool.query(
+    const result = await query(
       "UPDATE forms SET name=$1, typeOf=$2, uniqueNumber=$3 WHERE id=$4 RETURNING *",
       [name, typeOf, uniqueNumber, formId]
     );
@@ -99,7 +99,7 @@ app.put("/forms/:id/admin", checkRole("admin"), auth, async (req, res) => {
   const { status, takeNumber } = req.body;
 
   try {
-    const result = await pool.query(
+    const result = await query(
       "UPDATE forms SET status=$1, takeNumber=$2 WHERE id=$3 RETURNING *",
       [status, takeNumber, formId]
     );
@@ -118,7 +118,7 @@ app.put("/forms/:id/admin", checkRole("admin"), auth, async (req, res) => {
 app.delete("/forms/:id", checkRole("user"), auth, async (req, res) => {
   const formId = Number(req.params.id);
   try {
-    const result = await pool.query("DELETE FROM forms WHERE id=$1 RETURNING *", [formId]);
+    const result = await query("DELETE FROM forms WHERE id=$1 RETURNING *", [formId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Form not found" });
     }
@@ -132,8 +132,8 @@ app.delete("/forms/:id", checkRole("user"), auth, async (req, res) => {
 app.post("/recoveryForms", checkRole("admin"), auth, async (req, res) => {
   const { id, name, typeOf, uniqueNumber, status, takeNumber } = req.body;
   try {
-    await pool.query("DELETE FROM forms WHERE id=$1", [id]);
-    const result = await pool.query(
+    await query("DELETE FROM forms WHERE id=$1", [id]);
+    const result = await query(
       "INSERT INTO recoveryForms (id, name, typeOf, uniqueNumber, status, takeNumber) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
       [id, name, typeOf, uniqueNumber, "Not Relevant", takeNumber]
     );
@@ -146,7 +146,7 @@ app.post("/recoveryForms", checkRole("admin"), auth, async (req, res) => {
 
 app.get("/recoveryForms", checkRole("admin"), auth, async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM recoveryForms");
+    const result = await query("SELECT * FROM recoveryForms");
     res.json(result.rows);
   } catch (error) {
     console.error("Error fetching recovery forms:", error);
@@ -157,18 +157,18 @@ app.get("/recoveryForms", checkRole("admin"), auth, async (req, res) => {
 app.put("/recoveryForms/:id", checkRole("admin"), auth, async (req, res) => {
   const formId = Number(req.params.id);
   try {
-    const result = await pool.query("SELECT * FROM recoveryForms WHERE id=$1", [formId]);
+    const result = await query("SELECT * FROM recoveryForms WHERE id=$1", [formId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Form not found in recovery" });
     }
 
     const form = result.rows[0];
 
-    await pool.query("INSERT INTO forms (id, name, typeOf, uniqueNumber, status, takeNumber) VALUES ($1, $2, $3, $4, 'Pending', $5)", [
+    await query("INSERT INTO forms (id, name, typeOf, uniqueNumber, status, takeNumber) VALUES ($1, $2, $3, $4, 'Pending', $5)", [
       form.id, form.name, form.typeOf, form.uniqueNumber, form.takeNumber
     ]);
 
-    await pool.query("DELETE FROM recoveryForms WHERE id=$1", [formId]);
+    await query("DELETE FROM recoveryForms WHERE id=$1", [formId]);
 
     res.status(200).json({ message: "Form restored", data: form });
   } catch (error) {
@@ -180,7 +180,7 @@ app.put("/recoveryForms/:id", checkRole("admin"), auth, async (req, res) => {
 app.delete("/recoveryForms/:id", checkRole("admin"), auth, async (req, res) => {
   const formId = Number(req.params.id);
   try {
-    const result = await pool.query("DELETE FROM recoveryForms WHERE id=$1 RETURNING *", [formId]);
+    const result = await query("DELETE FROM recoveryForms WHERE id=$1 RETURNING *", [formId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Form not found" });
     }
@@ -194,7 +194,7 @@ app.delete("/recoveryForms/:id", checkRole("admin"), auth, async (req, res) => {
 app.post("/forms/:id/notRelevant/user", checkRole("user"), auth, async (req, res) => {
   const formId = Number(req.params.id);
   try {
-    const result = await pool.query("DELETE FROM forms WHERE id=$1 RETURNING *", [formId]);
+    const result = await query("DELETE FROM forms WHERE id=$1 RETURNING *", [formId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Form not found" });
     }
@@ -208,15 +208,15 @@ app.post("/forms/:id/notRelevant/user", checkRole("user"), auth, async (req, res
 app.put("/forms/:id/notRelevant/admin", checkRole("admin"), auth, async (req, res) => {
   const formId = Number(req.params.id);
   try {
-    const result = await pool.query("SELECT * FROM forms WHERE id=$1", [formId]);
+    const result = await query("SELECT * FROM forms WHERE id=$1", [formId]);
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Form not found" });
     }
 
     const form = result.rows[0];
-    await pool.query("DELETE FROM forms WHERE id=$1", [formId]);
+    await query("DELETE FROM forms WHERE id=$1", [formId]);
 
-    const insert = await pool.query(
+    const insert = await query(
       "INSERT INTO recoveryForms (id, name, typeOf, uniqueNumber, status, takeNumber) VALUES ($1, $2, $3, $4, $5, $6) RETURNING *",
       [form.id, form.name, form.typeOf, form.uniqueNumber, "Not Relevant", form.takeNumber]
     );
@@ -230,7 +230,7 @@ app.put("/forms/:id/notRelevant/admin", checkRole("admin"), auth, async (req, re
 
 app.get("/forms/king", checkRole("admin"), auth, async (req, res) => {
   try {
-    const getKing = await pool.query("SELECT takeNumber, status FROM recoveryForms WHERE status=$1", ["Fixed"]);
+    const getKing = await query("SELECT takeNumber, status FROM recoveryForms WHERE status=$1", ["Fixed"]);
     res.status(200).json(getKing.rows);
   } catch (error) {
     console.error("Error fetching king", error);

@@ -25,3 +25,4 @@ dist-ssr
 
 # Secret environment files
 backend/.env
+frontend/my-app/.env

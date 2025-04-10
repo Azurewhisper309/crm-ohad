@@ -1,13 +1,13 @@
-import React from "react";
-import AppRoutes from "./Routes";
-import { CRMProvider } from "./CrmContext";
+// main.jsx
+import { PublicClientApplication } from "@azure/msal-browser";
+import { MsalProvider } from "@azure/msal-react";
+import { msalConfig } from "./authConfig";
+import App from "./App";
 
-const App = () => {
-  return (
-    <CRMProvider>
-      <AppRoutes />
-    </CRMProvider>
-  );
-};
+const msalInstance = new PublicClientApplication(msalConfig);
 
-export default App;
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <MsalProvider instance={msalInstance}>
+    <App />
+  </MsalProvider>
+);
